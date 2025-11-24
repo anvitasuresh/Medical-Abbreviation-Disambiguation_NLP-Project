@@ -2,8 +2,6 @@
 Attention-Weighted Neural Network with BioWordVec
 for Medical Abbreviation Disambiguation
 
-Key Innovation: Instead of treating all context words equally (mean pooling),
-this model LEARNS which words are most important for disambiguation.
 """
 
 import numpy as np
@@ -626,7 +624,6 @@ def run_experiment(dataset_path, dataset_name, embedder):
 
     # train model
     print("\n5. Training Attention-Weighted Neural Network...")
-    print("   This learns which context words are most important")
 
     num_classes = len(np.unique(y_train))
 
@@ -735,7 +732,7 @@ def main():
     # run experiments
     results = {}
 
-    # experiment 1: Synthetic Data
+    # experiment 1: synthetic data
     if os.path.exists("data/synthetic_dataset.csv"):
         synthetic_acc, _ = run_experiment(
             "data/synthetic_dataset.csv", "SYNTHETIC DATA", embedder
@@ -745,7 +742,18 @@ def main():
         print("\n  Synthetic dataset not found at data/synthetic_dataset.csv")
         print("Skipping synthetic data experiment...")
 
-    # experiment 2: Real Data
+    # experiment 2: NB-generated synthetic data
+
+    if os.path.exists("data/nb_synthetic_dataset.csv"):
+        nb_synthetic_acc, _ = run_experiment(
+            "data/nb_synthetic_dataset.csv", "NB-GENERATED SYNTHETIC", embedder
+        )
+        results["nb_synthetic"] = nb_synthetic_acc
+    else:
+        print("\n  nb_synthetic_dataset.csv not found!")
+        print("Please run: python preprocessing/generate_NB_synthetic.py")
+
+    # experiment 3: real data
     if os.path.exists("data/filtered_dataset.csv"):
         real_acc, _ = run_experiment(
             "data/filtered_dataset.csv", "REAL DATA (FILTERED)", embedder
@@ -759,14 +767,47 @@ def main():
     print("FINAL SUMMARY - ATTENTION NN")
     print("=" * 70)
 
+    print("\n{:<30s} {:>12s}".format("Dataset", "Accuracy"))
+    print("-" * 44)
+
     if "synthetic" in results:
-        print(f"Synthetic Data Accuracy: {results['synthetic']:.4f}")
+        print(
+            "{:<30s} {:>11.2f}%".format(
+                "Template Synthetic", results["synthetic"] * 100
+            )
+        )
+
+    if "nb_synthetic" in results:
+        print(
+            "{:<30s} {:>11.2f}%".format(
+                "NB-Generated Synthetic", results["nb_synthetic"] * 100
+            )
+        )
+
     if "real" in results:
-        print(f"Real Data Accuracy:      {results['real']:.4f}")
+        print("{:<30s} {:>11.2f}%".format("Real Data", results["real"] * 100))
+
+    # analysis
+    print("\n" + "=" * 70)
+    print("ANALYSIS")
+    print("=" * 70)
 
     if "synthetic" in results and "real" in results:
         gap = results["synthetic"] - results["real"]
-        print(f"\nPerformance Gap:         {gap:.4f} ({gap*100:.2f}%)")
+        print(f"\nTemplate Synthetic → Real Data Gap: {gap:.4f} ({gap*100:.2f}%)")
+
+    if "nb_synthetic" in results:
+        if "synthetic" in results:
+            nb_vs_template = results["nb_synthetic"] - results["synthetic"]
+            print(
+                f"\nNB-Generated → Template Gap: {nb_vs_template:.4f} ({nb_vs_template*100:.2f}%)"
+            )
+
+        if "real" in results:
+            nb_vs_real = results["nb_synthetic"] - results["real"]
+            print(
+                f"\nNB-Generated → Real Data Gap: {nb_vs_real:.4f} ({nb_vs_real*100:.2f}%)"
+            )
 
 
 if __name__ == "__main__":

@@ -2,8 +2,6 @@
 Mean Pooling Neural Network with BioWordVec
 for Medical Abbreviation Disambiguation
 
-This serves as the neural baseline before adding attention mechanisms.
-Uses simple mean pooling of context word embeddings.
 """
 
 import numpy as np
@@ -769,7 +767,7 @@ def main():
 
     """
     print("=" * 70)
-    print("MEAN POOLING NEURAL NETWORK - COMPREHENSIVE EVALUATION")
+    print("MEAN POOLING NEURAL NETWORK - full eval")
     print("=" * 70)
 
     BIOWORDVEC_PATH = "bio_embedding_extrinsic"
@@ -804,6 +802,7 @@ def main():
     results = {}
 
     # experiment 1: synthetic data
+
     if os.path.exists("data/synthetic_dataset.csv"):
         synthetic_acc, _ = run_experiment(
             "data/synthetic_dataset.csv", "SYNTHETIC DATA", embedder
@@ -813,7 +812,21 @@ def main():
         print("\n  Synthetic dataset not found at data/synthetic_dataset.csv")
         print("Skipping synthetic data experiment...")
 
-    # experiment 2: real data
+    # experiment 2: NB-generated synthetic data
+
+    # check if NB synthetic exists
+    if os.path.exists("data/nb_synthetic_dataset.csv"):
+        nb_synthetic_acc, _ = run_experiment(  # ← Unpack tuple
+            "data/nb_synthetic_dataset.csv", "NB-GENERATED SYNTHETIC", embedder
+        )
+        results["nb_synthetic"] = nb_synthetic_acc
+    else:
+        print("\n  nb_synthetic_dataset.csv not found!")
+        print("Please run: python preprocessing/generate_NB_synthetic.py")
+        results["nb_synthetic"] = None
+
+    # experiment 3: real data
+
     if os.path.exists("data/filtered_dataset.csv"):
         real_acc, _ = run_experiment(
             "data/filtered_dataset.csv", "REAL DATA (FILTERED)", embedder
@@ -827,14 +840,62 @@ def main():
     print("FINAL SUMMARY - MEAN POOLING NN")
     print("=" * 70)
 
+    # print results table
+    print("\n{:<30s} {:>12s}".format("Dataset", "Accuracy"))
+    print("-" * 44)
+
     if "synthetic" in results:
-        print(f"Synthetic Data Accuracy: {results['synthetic']:.4f}")
+        print(
+            "{:<30s} {:>11.2f}%".format(
+                "Template Synthetic", results["synthetic"] * 100
+            )
+        )
+
+    if "nb_synthetic" in results and results["nb_synthetic"] is not None:
+        print(
+            "{:<30s} {:>11.2f}%".format(
+                "NB-Generated Synthetic", results["nb_synthetic"] * 100
+            )
+        )
+
     if "real" in results:
-        print(f"Real Data Accuracy:      {results['real']:.4f}")
+        print("{:<30s} {:>11.2f}%".format("Real Data", results["real"] * 100))
+
+    # print analysis
+    print("\n" + "=" * 70)
+    print("ANALYSIS")
+    print("=" * 70)
 
     if "synthetic" in results and "real" in results:
         gap = results["synthetic"] - results["real"]
-        print(f"\nPerformance Gap:         {gap:.4f} ({gap*100:.2f}%)")
+        print(f"\nTemplate Synthetic → Real Data Gap: {gap:.4f} ({gap*100:.2f}%)")
+
+    if "nb_synthetic" in results and results["nb_synthetic"] is not None:
+        if "synthetic" in results:
+            nb_vs_template = results["nb_synthetic"] - results["synthetic"]
+            print(
+                f"\nNB-Generated → Template Gap: {nb_vs_template:.4f} ({nb_vs_template*100:.2f}%)"
+            )
+            if abs(nb_vs_template) < 0.05:
+                print("  Similar performance: Both near-perfect on synthetic data")
+            else:
+                print("  NB-generated is harder than template synthetic")
+
+        if "real" in results:
+            nb_vs_real = results["nb_synthetic"] - results["real"]
+            print(
+                f"\nNB-Generated → Real Data Gap: {nb_vs_real:.4f} ({nb_vs_real*100:.2f}%)"
+            )
+            if nb_vs_real > 0.10:
+                print("  Large gap: Real data has complexity beyond NB's model")
+                print("  NB's independence assumptions don't capture real patterns")
+            elif nb_vs_real > 0.05:
+                print("  Moderate gap: NB-generated is somewhat easier than real")
+            else:
+                print("  Small gap: NB-generated captures real data difficulty well")
+                print("  NB's model approximates real data distribution")
+
+    print("\n" + "=" * 70)
 
 
 if __name__ == "__main__":
