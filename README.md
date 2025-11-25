@@ -1,2 +1,4 @@
-# nlp_final_project
-nlp final project
+# Medical Abbreviation Disambiguation Using Naive Bayes and Neural Networks
+
+This project investigates medical abbreviation disambiguation as a multi-class classification problem, comparing classical probabilistic methods (Multinomial Naive Bayes) with modern neural network approaches using pre-trained BioWordVec embeddings. We evaluated models across three types of data: template-based synthetic data with hand-crafted discriminative keywords, NB-generated synthetic data sampled from learned probability distributions, and real medical abstracts from the MeDAL dataset. Our analysis reveals that natural linguistic structure in real medical text — including predictable word sequences, grammatical constraints, and semantic coherence — provides exploitable signal that both classical and neural models leverage effectively. The study demonstrates the trade-offs between model interpretability, computational efficiency, and performance gains when applying different machine learning approaches to medical natural language processing tasks.
+
